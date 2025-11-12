@@ -40,36 +40,52 @@ jobs:
             ninja-build \
             libglib2.0-dev
           
-      # Step 4: Install depot_tools and update PATH
-      - name: Install depot_tools
+      # Step 4: Cache depot_tools
+      - name: Cache depot_tools
+        id: depot_tools-cache
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/depot_tools
+          key: ${{ runner.os }}-depot_tools-${{ hashFiles('**/depot_tools') }}
+          restore-keys: |
+            ${{ runner.os }}-depot_tools-
+
+      # Step 5: Clone depot_tools if not found in cache
+      - name: Clone depot_tools
+        if: steps.depot_tools-cache.outputs.cache-hit != 'true'
         run: |
-          git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git
-          export PATH="$PATH:$(pwd)/depot_tools"  # Directly update PATH in the current shell session
-          echo $PATH  # Verify that depot_tools is in the PATH
-          # Check if fetch is available
+          git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git ~/.cache/depot_tools
+          
+      # Step 6: Ensure depot_tools is in PATH
+      - name: Ensure depot_tools is in PATH
+        run: |
+          export DEPOT_TOOLS_PATH="$HOME/.cache/depot_tools"
+          export PATH="$DEPOT_TOOLS_PATH:$PATH"
+          echo $PATH  # Verify depot_tools is in PATH
           which fetch || echo "fetch command not found"
 
-      # Step 5: Fetch Chromium source code
+      # Step 7: Fetch Chromium source code
       - name: Fetch Chromium source code
         run: |
-          export PATH="$PATH:$(pwd)/depot_tools"  # Ensure PATH is set for this step
+          export DEPOT_TOOLS_PATH="$HOME/.cache/depot_tools"
+          export PATH="$DEPOT_TOOLS_PATH:$PATH"
           mkdir -p chromium && cd chromium
           fetch --nohooks chromium  # This should now work since depot_tools is in PATH
           gclient sync
 
-      # Step 6: Install build dependencies for Chromium
+      # Step 8: Install build dependencies for Chromium
       - name: Install Chromium build dependencies
         run: |
           cd chromium/src
           ./build/install-build-deps.sh
 
-      # Step 7: Generate build files using GN
+      # Step 9: Generate build files using GN
       - name: Generate build files
         run: |
           cd chromium/src
           gn gen out/Default
 
-      # Step 8: Customize build options (args.gn)
+      # Step 10: Customize build options (args.gn)
       - name: Set build args
         run: |
           cat <<EOF > chromium/src/out/Default/args.gn
@@ -82,13 +98,13 @@ jobs:
           symbol_level = 0
           EOF
 
-      # Step 9: Build Chromium
+      # Step 11: Build Chromium
       - name: Build Chromium
         run: |
           cd chromium/src
           autoninja -C out/Default chrome
 
-      # Step 10: Verify Chromium build
+      # Step 12: Verify Chromium build
       - name: Verify Chromium build
         run: |
           cd chromium/src/out/Default
