@@ -1,14 +1,13 @@
 name: Build Chromium
 
-permissions:
-  contents: write
-
 on:
   push:
-    branches: [ main ]
+    branches:
+      - main
   pull_request:
-    branches: [ main ]
-    
+    branches:
+      - main
+
 jobs:
   build:
     runs-on: ubuntu-22.04
