@@ -64,31 +64,45 @@ jobs:
           echo $PATH  # Verify depot_tools is in PATH
           which fetch || echo "fetch command not found"
 
-      # Step 7: Fetch Chromium source code
+      # Step 7: Cache Chromium source code directory
+      - name: Cache Chromium source code
+        id: chromium-cache
+        uses: actions/cache@v3
+        with:
+          path: ~/chromium/src
+          key: ${{ runner.os }}-chromium-src-${{ hashFiles('**/chromium/src') }}
+          restore-keys: |
+            ${{ runner.os }}-chromium-src-
+
+      # Step 8: Fetch Chromium source code if not in cache
       - name: Fetch Chromium source code
         run: |
           export DEPOT_TOOLS_PATH="$HOME/.cache/depot_tools"
           export PATH="$DEPOT_TOOLS_PATH:$PATH"
-          mkdir -p chromium && cd chromium
-          fetch --nohooks chromium  # This should now work since depot_tools is in PATH
-          gclient sync
+          mkdir -p ~/chromium && cd ~/chromium
+          if [ ! -d "src" ]; then
+            fetch --nohooks chromium  # Only fetch if src directory is not found
+            gclient sync
+          else
+            echo "Chromium source already fetched, skipping fetch."
+          fi
 
-      # Step 8: Install build dependencies for Chromium
+      # Step 9: Install build dependencies for Chromium
       - name: Install Chromium build dependencies
         run: |
-          cd chromium/src
+          cd ~/chromium/src
           ./build/install-build-deps.sh
 
-      # Step 9: Generate build files using GN
+      # Step 10: Generate build files using GN
       - name: Generate build files
         run: |
-          cd chromium/src
+          cd ~/chromium/src
           gn gen out/Default
 
-      # Step 10: Customize build options (args.gn)
+      # Step 11: Customize build options (args.gn)
       - name: Set build args
         run: |
-          cat <<EOF > chromium/src/out/Default/args.gn
+          cat <<EOF > ~/chromium/src/out/Default/args.gn
           is_debug = false
           is_component_build = true
           enable_nacl = false
@@ -98,14 +112,14 @@ jobs:
           symbol_level = 0
           EOF
 
-      # Step 11: Build Chromium
+      # Step 12: Build Chromium
       - name: Build Chromium
         run: |
-          cd chromium/src
+          cd ~/chromium/src
           autoninja -C out/Default chrome
 
-      # Step 12: Verify Chromium build
+      # Step 13: Verify Chromium build
       - name: Verify Chromium build
         run: |
-          cd chromium/src/out/Default
+          cd ~/chromium/src/out/Default
           ./chrome --version
