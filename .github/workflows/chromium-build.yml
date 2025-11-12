@@ -18,12 +18,13 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      # Step 2: Set up the environment
+      # Step 2: Set up Python
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.x'
         
+      # Step 3: Install dependencies
       - name: Install dependencies
         run: |
           sudo apt update
@@ -39,33 +40,33 @@ jobs:
             ninja-build \
             libglib2.0-dev
           
-      # Step 3: Install depot_tools
+      # Step 4: Install depot_tools
       - name: Install depot_tools
         run: |
           git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git
-          echo "export PATH=\"\$PATH:$(pwd)/depot_tools\"" >> ~/.bashrc
-          source ~/.bashrc
+          echo "export PATH=\"$PATH:$(pwd)/depot_tools\"" >> ~/.bashrc
+          source ~/.bashrc  # Ensure that the PATH is updated
 
-      # Step 4: Fetch Chromium source code
+      # Step 5: Fetch Chromium source code
       - name: Fetch Chromium source code
         run: |
           mkdir -p chromium && cd chromium
-          fetch --nohooks chromium
+          fetch --nohooks chromium  # This should now work since depot_tools is in PATH
           gclient sync
-      
-      # Step 5: Install build dependencies for Chromium
+
+      # Step 6: Install build dependencies for Chromium
       - name: Install Chromium build dependencies
         run: |
           cd chromium/src
           ./build/install-build-deps.sh
 
-      # Step 6: Generate build files using GN
+      # Step 7: Generate build files using GN
       - name: Generate build files
         run: |
           cd chromium/src
           gn gen out/Default
 
-      # Step 7: Customize build options (args.gn)
+      # Step 8: Customize build options (args.gn)
       - name: Set build args
         run: |
           cat <<EOF > chromium/src/out/Default/args.gn
@@ -78,13 +79,13 @@ jobs:
           symbol_level = 0
           EOF
 
-      # Step 8: Build Chromium
+      # Step 9: Build Chromium
       - name: Build Chromium
         run: |
           cd chromium/src
           autoninja -C out/Default chrome
 
-      # Step 9: Run Chromium to verify the build
+      # Step 10: Verify Chromium build
       - name: Verify Chromium build
         run: |
           cd chromium/src/out/Default
