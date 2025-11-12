@@ -40,16 +40,19 @@ jobs:
             ninja-build \
             libglib2.0-dev
           
-      # Step 4: Install depot_tools
+      # Step 4: Install depot_tools and update PATH
       - name: Install depot_tools
         run: |
           git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git
-          echo "export PATH=\"$PATH:$(pwd)/depot_tools\"" >> ~/.bashrc
-          source ~/.bashrc  # Ensure that the PATH is updated
+          export PATH="$PATH:$(pwd)/depot_tools"  # Directly update PATH in the current shell session
+          echo $PATH  # Verify that depot_tools is in the PATH
+          # Check if fetch is available
+          which fetch || echo "fetch command not found"
 
       # Step 5: Fetch Chromium source code
       - name: Fetch Chromium source code
         run: |
+          export PATH="$PATH:$(pwd)/depot_tools"  # Ensure PATH is set for this step
           mkdir -p chromium && cd chromium
           fetch --nohooks chromium  # This should now work since depot_tools is in PATH
           gclient sync
