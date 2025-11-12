@@ -1,9 +1,6 @@
 name: Build Chromium
 
-on:
-  push:
-    branches:
-      - main
+
 
 jobs:
   build:
